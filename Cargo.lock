@@ -6584,6 +6584,7 @@ dependencies = [
  "anyhow",
  "blockifier",
  "convert_case 0.6.0",
+ "futures",
  "katana-primitives",
  "katana-provider",
  "parking_lot 0.12.1",
