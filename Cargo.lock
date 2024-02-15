@@ -6696,6 +6696,7 @@ dependencies = [
  "anyhow",
  "derive_more",
  "ethers",
+ "futures",
  "jsonrpsee 0.16.3",
  "katana-core",
  "katana-primitives",
