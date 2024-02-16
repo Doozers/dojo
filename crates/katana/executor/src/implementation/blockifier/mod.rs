@@ -3,6 +3,7 @@ mod state;
 mod utils;
 
 use blockifier::block_context::BlockContext;
+use katana_primitives::block::ExecutableBlock;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
@@ -59,7 +60,10 @@ impl<'a> StarknetVMProcessor<'a> {
         cfg_env: CfgEnv,
         simulation_flags: ExecutionSimulationFlag,
     ) -> Self {
-        todo!()
+        let transactions = Vec::new();
+        let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
+        let state = state::CachedState::new(StateProviderDb(state));
+        Self { block_context, state, transactions, simulation_flags }
     }
 }
 
@@ -80,6 +84,28 @@ impl<'a> abstraction::TransactionExecutor for StarknetVMProcessor<'a> {
     }
 
     fn call(&self, call: EntryPointCall, initial_gas: u128) -> ExecutorResult<Vec<FieldElement>> {
+        todo!()
+    }
+}
+
+impl<'a> abstraction::BlockExecutor<'a> for StarknetVMProcessor<'a> {
+    fn execute_block(&mut self, block: ExecutableBlock) -> ExecutorResult<()> {
+        todo!()
+    }
+
+    fn take_execution_output(&mut self) -> crate::ExecutionOutput {
+        todo!()
+    }
+
+    fn state(&self) -> Box<dyn StateProvider + 'a> {
+        Box::new(self.state.clone())
+    }
+
+    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>)] {
+        &self.transactions
+    }
+
+    fn block_env(&self) -> BlockEnv {
         todo!()
     }
 }

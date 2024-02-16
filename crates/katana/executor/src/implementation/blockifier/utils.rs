@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use blockifier::block_context::BlockContext;
+use blockifier::block_context::{BlockContext, BlockInfo, ChainInfo, FeeTokenAddresses, GasPrices};
 use blockifier::execution::common_hints::ExecutionMode;
 use blockifier::execution::entry_point::{
     CallEntryPoint, EntryPointExecutionContext, ExecutionResources,
@@ -20,8 +20,10 @@ use blockifier::transaction::transactions::{
     L1HandlerTransaction,
 };
 use katana_primitives::conversion::blockifier::to_class;
+use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::{DeclareTx, ExecutableTx, ExecutableTxWithHash};
 use katana_primitives::FieldElement;
+use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::{ClassHash, CompiledClassHash, EntryPointSelector, Nonce};
 use starknet_api::transaction::{
     Calldata, ContractAddressSalt, DeclareTransaction as ApiDeclareTransaction,
@@ -225,5 +227,35 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                 tx_hash: TransactionHash(hash.into()),
             })
         }
+    }
+}
+
+/// Create a block context from the chain environment values.
+pub(super) fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockContext {
+    let fee_token_addresses = FeeTokenAddresses {
+        eth_fee_token_address: cfg_env.fee_token_addresses.eth.into(),
+        strk_fee_token_address: cfg_env.fee_token_addresses.strk.into(),
+    };
+
+    let gas_prices = GasPrices {
+        eth_l1_gas_price: block_env.l1_gas_prices.eth.try_into().unwrap(),
+        strk_l1_gas_price: block_env.l1_gas_prices.strk.try_into().unwrap(),
+        eth_l1_data_gas_price: 0,
+        strk_l1_data_gas_price: 0,
+    };
+
+    BlockContext {
+        block_info: BlockInfo {
+            gas_prices,
+            use_kzg_da: false,
+            block_number: BlockNumber(block_env.number),
+            block_timestamp: BlockTimestamp(block_env.timestamp),
+            sequencer_address: block_env.sequencer_address.into(),
+            max_recursion_depth: cfg_env.max_recursion_depth,
+            validate_max_n_steps: cfg_env.validate_max_n_steps,
+            invoke_tx_max_n_steps: cfg_env.invoke_tx_max_n_steps,
+            vm_resource_fee_cost: cfg_env.vm_resource_fee_cost.clone().into(),
+        },
+        chain_info: ChainInfo { fee_token_addresses, chain_id: cfg_env.chain_id.into() },
     }
 }

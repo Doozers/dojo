@@ -53,6 +53,15 @@ impl<'a> StateReader for StateProviderDb<'a> {
 
 pub(super) struct CachedState<S: StateReader>(pub(super) Arc<RwLock<CachedStateInner<S>>>);
 
+impl<S> Clone for CachedState<S>
+where
+    S: StateReader + Send + Sync,
+{
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+}
+
 type DeclaredClass = (CompiledClass, Option<FlattenedSierraClass>);
 
 #[derive(Debug)]
