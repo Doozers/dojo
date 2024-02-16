@@ -11,12 +11,27 @@ katana-primitives.workspace = true
 katana-provider.workspace = true
 
 anyhow.workspace = true
+auto_impl = "1.1.0"
 convert_case.workspace = true
+derive_more.workspace = true
 parking_lot.workspace = true
+serde_json.workspace = true
 starknet.workspace = true
+starknet_api.workspace = true
+thiserror.workspace = true
 tracing.workspace = true
 
 # blockifier deps
-blockifier.workspace = true
-starknet_api.workspace = true
-tokio.workspace = true
+blockifier = { workspace = true, optional = true }
+
+# starknet_in_rust deps
+cairo-lang-sierra = { workspace = true, optional = true }
+sir = { workspace = true, optional = true }
+starknet-types-core = { workspace = true, optional = true }
+
+[features]
+default = [ "blockifier", "sir" ]
+
+blockifier = [ "dep:blockifier", "katana-primitives/blockifier" ]
+native = [ "sir", "sir/cairo-native" ]
+sir = [ "dep:sir", "dep:starknet-types-core" ]

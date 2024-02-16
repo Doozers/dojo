@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use katana_executor::implementation::sir::{NativeExecutorFactory, SimulationFlag};
+use katana_executor::ExecutorFactory;
 use katana_primitives::block::{
     Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
 };
@@ -13,7 +15,6 @@ use katana_primitives::FieldElement;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
-use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use parking_lot::RwLock;
 use starknet::core::types::{BlockId, BlockStatus, MaybePendingBlockWithTxHashes};
 use starknet::core::utils::parse_cairo_short_string;
@@ -32,7 +33,7 @@ use crate::env::{get_default_vm_resource_fee_cost, BlockContextGenerator};
 use crate::service::block_producer::{BlockProductionError, MinedBlockOutcome};
 use crate::utils::get_current_timestamp;
 
-pub struct Backend {
+pub struct Backend<EF: ExecutorFactory> {
     /// The config used to generate the backend.
     pub config: StarknetConfig,
     /// stores all block related data in memory
@@ -41,9 +42,11 @@ pub struct Backend {
     pub chain_id: ChainId,
     /// The block context generator.
     pub block_context_generator: RwLock<BlockContextGenerator>,
+
+    pub executor_factory: EF,
 }
 
-impl Backend {
+impl Backend<NativeExecutorFactory> {
     pub async fn new(mut config: StarknetConfig) -> Self {
         let block_context_generator = config.block_context_generator();
 
@@ -112,28 +115,49 @@ impl Backend {
             (blockchain, config.env.chain_id)
         };
 
+        let simulation_flags = SimulationFlag {
+            skip_validate: config.disable_validate,
+            skip_fee_transfer: config.disable_fee,
+            ..Default::default()
+        };
+
+        let cfg_env = CfgEnv {
+            chain_id,
+            vm_resource_fee_cost: get_default_vm_resource_fee_cost(),
+            invoke_tx_max_n_steps: config.env.invoke_max_steps,
+            validate_max_n_steps: config.env.validate_max_steps,
+            max_recursion_depth: MAX_RECURSION_DEPTH,
+            fee_token_addresses: FeeTokenAddressses {
+                eth: config.genesis.fee_token.address,
+                strk: Default::default(),
+            },
+        };
+
+        let executor_factory = NativeExecutorFactory::new(cfg_env, simulation_flags);
+
         Self {
             chain_id,
             blockchain,
             config,
+            executor_factory,
             block_context_generator: RwLock::new(block_context_generator),
         }
     }
 
-    /// Mines a new block based on the provided execution outcome.
-    /// This method should only be called by the
-    /// [IntervalBlockProducer](crate::service::block_producer::IntervalBlockProducer) when the node
-    /// is running in `interval` mining mode.
-    pub fn mine_pending_block(
-        &self,
-        block_env: &BlockEnv,
-        tx_receipt_pairs: Vec<(TxWithHash, Receipt)>,
-        state_updates: StateUpdatesWithDeclaredClasses,
-    ) -> Result<(MinedBlockOutcome, Box<dyn StateProvider>), BlockProductionError> {
-        let outcome = self.do_mine_block(block_env, tx_receipt_pairs, state_updates)?;
-        let new_state = StateFactoryProvider::latest(&self.blockchain.provider())?;
-        Ok((outcome, new_state))
-    }
+    // /// Mines a new block based on the provided execution outcome.
+    // /// This method should only be called by the
+    // /// [IntervalBlockProducer](crate::service::block_producer::IntervalBlockProducer) when the
+    // node /// is running in `interval` mining mode.
+    // pub fn mine_pending_block(
+    //     &self,
+    //     block_env: &BlockEnv,
+    //     tx_receipt_pairs: Vec<(TxWithHash, Receipt)>,
+    //     state_updates: StateUpdatesWithDeclaredClasses,
+    // ) -> Result<(MinedBlockOutcome, Box<dyn StateProvider>), BlockProductionError> {
+    //     let outcome = self.do_mine_block(block_env, tx_receipt_pairs, state_updates)?;
+    //     let new_state = StateFactoryProvider::latest(&self.blockchain.provider())?;
+    //     Ok((outcome, new_state))
+    // }
 
     pub fn do_mine_block(
         &self,
@@ -144,8 +168,11 @@ impl Backend {
         let (txs, receipts): (Vec<TxWithHash>, Vec<Receipt>) = tx_receipt_pairs.into_iter().unzip();
 
         let prev_hash = BlockHashProvider::latest_hash(self.blockchain.provider())?;
+        let block_number = block_env.number;
+        let tx_count = txs.len();
 
         let partial_header = PartialHeader {
+            number: block_number,
             parent_hash: prev_hash,
             version: CURRENT_STARKNET_VERSION,
             timestamp: block_env.timestamp,
@@ -156,10 +183,7 @@ impl Backend {
             },
         };
 
-        let tx_count = txs.len();
-        let block_number = block_env.number;
-
-        let header = Header::new(partial_header, block_number, FieldElement::ZERO);
+        let header = Header::new(partial_header, FieldElement::ZERO);
         let block = Block { header, body: txs }.seal();
         let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
 
@@ -218,6 +242,7 @@ impl Backend {
 #[cfg(test)]
 mod tests {
 
+    use katana_executor::implementation::sir::NativeExecutorFactory;
     use katana_primitives::genesis::Genesis;
     use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
     use katana_provider::traits::env::BlockEnvProvider;
@@ -234,7 +259,7 @@ mod tests {
         }
     }
 
-    async fn create_test_backend() -> Backend {
+    async fn create_test_backend() -> Backend<NativeExecutorFactory> {
         Backend::new(create_test_starknet_config()).await
     }
 

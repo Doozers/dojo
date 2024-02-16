@@ -1,4 +1,4 @@
-use katana_primitives::block::BlockHashOrNumber;
+use katana_primitives::block::{BlockHashOrNumber, Header};
 use katana_primitives::env::BlockEnv;
 
 use crate::ProviderResult;

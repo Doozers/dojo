@@ -9,7 +9,7 @@ use futures::channel::mpsc::Receiver;
 use futures::stream::{Fuse, Stream, StreamExt};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use starknet::core::types::FieldElement;
-use tracing::{error, trace};
+use tracing::info;
 
 use self::block_producer::BlockProducer;
 use crate::pool::TransactionPool;
@@ -49,10 +49,10 @@ impl Future for NodeService {
             while let Poll::Ready(Some(outcome)) = messaging.poll_next_unpin(cx) {
                 match outcome {
                     MessagingOutcome::Gather { msg_count, .. } => {
-                        trace!(target: "node", "collected {msg_count} messages from settlement chain");
+                        info!(target: "node", "collected {msg_count} messages from settlement chain");
                     }
                     MessagingOutcome::Send { msg_count, .. } => {
-                        trace!(target: "node", "sent {msg_count} messages to the settlement chain");
+                        info!(target: "node", "sent {msg_count} messages to the settlement chain");
                     }
                 }
             }
@@ -64,11 +64,11 @@ impl Future for NodeService {
             while let Poll::Ready(Some(res)) = pin.block_producer.poll_next_unpin(cx) {
                 match res {
                     Ok(outcome) => {
-                        trace!(target: "node", "mined block {}", outcome.block_number)
+                        info!(target: "node", "mined block {}", outcome.block_number)
                     }
 
                     Err(err) => {
-                        error!(target: "node", "failed to mine block: {err}");
+                        info!(target: "node", "failed to mine block: {err}");
                     }
                 }
             }

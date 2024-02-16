@@ -4,6 +4,7 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use futures::{Future, FutureExt, Stream};
+use katana_executor::implementation::sir::NativeExecutorFactory;
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::{ExecutableTxWithHash, L1HandlerTx, TxHash};
@@ -23,7 +24,7 @@ type MessageSettlingFuture = MessagingFuture<MessengerResult<Option<(u64, usize)
 pub struct MessagingService {
     /// The interval at which the service will perform the messaging operations.
     interval: Interval,
-    backend: Arc<Backend>,
+    backend: Arc<Backend<NativeExecutorFactory>>,
     pool: Arc<TransactionPool>,
     /// The messenger mode the service is running in.
     messenger: Arc<MessengerMode>,
@@ -43,7 +44,7 @@ impl MessagingService {
     pub async fn new(
         config: MessagingConfig,
         pool: Arc<TransactionPool>,
-        backend: Arc<Backend>,
+        backend: Arc<Backend<NativeExecutorFactory>>,
     ) -> anyhow::Result<Self> {
         let gather_from_block = config.from_block;
         let interval = interval_from_seconds(config.interval);
@@ -72,7 +73,7 @@ impl MessagingService {
     async fn gather_messages(
         messenger: Arc<MessengerMode>,
         pool: Arc<TransactionPool>,
-        backend: Arc<Backend>,
+        backend: Arc<Backend<NativeExecutorFactory>>,
         from_block: u64,
     ) -> MessengerResult<(u64, usize)> {
         // 200 avoids any possible rejection from RPC with possibly lot's of messages.
@@ -113,7 +114,7 @@ impl MessagingService {
 
     async fn send_messages(
         block_num: u64,
-        backend: Arc<Backend>,
+        backend: Arc<Backend<NativeExecutorFactory>>,
         messenger: Arc<MessengerMode>,
     ) -> MessengerResult<Option<(u64, usize)>> {
         let Some(messages) = ReceiptProvider::receipts_by_block(
