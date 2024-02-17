@@ -28,7 +28,7 @@ use crate::abstraction::{
 use crate::EntryPointCall;
 
 /// Simulation flags available for the [StarknetVMProcessor].
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 pub struct SimulationFlag {
     /// Skip the transaction execution.
     pub skip_execute: bool,
@@ -73,7 +73,7 @@ impl ExecutorFactory for NativeExecutorFactory {
         P: StateProvider + 'a,
     {
         let cfg_env = self.cfg_env.clone();
-        let simulation_flags = self.simulation_flags;
+        let simulation_flags = self.simulation_flags.clone();
         Box::new(StarknetVMProcessor::new(Box::new(state), block_env, cfg_env, simulation_flags))
     }
 
@@ -151,17 +151,17 @@ impl<'a> TransactionExecutor for StarknetVMProcessor<'a> {
         &mut self,
         tx: ExecutableTxWithHash,
     ) -> ExecutorResult<Box<dyn TransactionExecutionOutput>> {
-        let partial_tx = TxWithHash::from(&tx);
+        let tx_ = TxWithHash::from(&tx);
 
         let state = &self.state;
         let block_context = &self.block_context;
-        let simulation_flag = self.simulation_flags;
+        let simulation_flag = self.simulation_flags.clone();
 
         let remaining_gas = 0;
         let res = utils::transact(tx, state, block_context, remaining_gas, simulation_flag)?;
 
-        let receipt = res.receipt(partial_tx.as_ref());
-        self.transactions.push((partial_tx, Some(receipt)));
+        let receipt = res.receipt(tx_.as_ref());
+        self.transactions.push((tx_, Some(receipt)));
 
         Ok(Box::new(res))
     }
@@ -211,7 +211,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
         Ok(())
     }
 
-    fn take_execution_output(&mut self) -> ExecutionOutput {
+    fn take_execution_output(&mut self) -> ExecutorResult<ExecutionOutput> {
         let transactions = std::mem::take(&mut self.transactions);
         let state = &mut self.state.0.write().inner;
 
@@ -273,7 +273,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
             },
         };
 
-        ExecutionOutput { states: state_updates, transactions }
+        Ok(ExecutionOutput { states: state_updates, transactions })
     }
 
     fn state(&self) -> Box<dyn StateProvider + 'a> {

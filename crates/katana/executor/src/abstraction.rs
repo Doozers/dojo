@@ -76,7 +76,7 @@ pub trait BlockExecutor<'a>: TransactionExecutor + Send + Sync {
     fn execute_block(&mut self, block: ExecutableBlock) -> ExecutorResult<()>;
 
     /// Takes the output state of the executor.
-    fn take_execution_output(&mut self) -> ExecutionOutput;
+    fn take_execution_output(&mut self) -> ExecutorResult<ExecutionOutput>;
 
     /// Returns the current state of the executor.
     fn state(&self) -> Box<dyn StateProvider + 'a>;

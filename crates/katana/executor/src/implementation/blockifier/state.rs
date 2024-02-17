@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use blockifier::state::cached_state::{self, GlobalContractCache};
-use blockifier::state::state_api::StateReader;
+use blockifier::state::state_api::{self, StateReader, StateResult};
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
@@ -15,30 +15,28 @@ impl<'a> StateReader for StateProviderDb<'a> {
     fn get_class_hash_at(
         &mut self,
         contract_address: starknet_api::core::ContractAddress,
-    ) -> blockifier::state::state_api::StateResult<starknet_api::core::ClassHash> {
+    ) -> StateResult<starknet_api::core::ClassHash> {
         todo!()
     }
 
     fn get_compiled_class_hash(
         &mut self,
         class_hash: starknet_api::core::ClassHash,
-    ) -> blockifier::state::state_api::StateResult<starknet_api::core::CompiledClassHash> {
+    ) -> StateResult<starknet_api::core::CompiledClassHash> {
         todo!()
     }
 
     fn get_compiled_contract_class(
         &mut self,
         class_hash: starknet_api::core::ClassHash,
-    ) -> blockifier::state::state_api::StateResult<
-        blockifier::execution::contract_class::ContractClass,
-    > {
+    ) -> StateResult<blockifier::execution::contract_class::ContractClass> {
         todo!()
     }
 
     fn get_nonce_at(
         &mut self,
         contract_address: starknet_api::core::ContractAddress,
-    ) -> blockifier::state::state_api::StateResult<starknet_api::core::Nonce> {
+    ) -> StateResult<starknet_api::core::Nonce> {
         todo!()
     }
 
@@ -46,7 +44,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         &mut self,
         contract_address: starknet_api::core::ContractAddress,
         key: starknet_api::state::StorageKey,
-    ) -> blockifier::state::state_api::StateResult<starknet_api::hash::StarkFelt> {
+    ) -> StateResult<starknet_api::hash::StarkFelt> {
         todo!()
     }
 }
