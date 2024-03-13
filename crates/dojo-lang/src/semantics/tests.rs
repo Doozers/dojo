@@ -16,6 +16,8 @@ test_file_test!(
         get: "get",
 
         set: "set",
+
+        get_by_key: "get_by_key"
     },
     test_semantics
 );

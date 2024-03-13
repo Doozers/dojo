@@ -27,6 +27,7 @@ use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
+use crate::inline_macros::get_by_key::GetByKeyMacro;
 use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
 use crate::model::handle_model_struct;
 use crate::print::{handle_print_enum, handle_print_struct};
@@ -224,6 +225,7 @@ pub fn dojo_plugin_suite() -> PluginSuite {
         .add_inline_macro_plugin::<DeleteMacro>()
         .add_inline_macro_plugin::<GetMacro>()
         .add_inline_macro_plugin::<SetMacro>()
+        .add_inline_macro_plugin::<GetByKeyMacro>()
         .add_inline_macro_plugin::<EmitMacro>();
 
     suite
